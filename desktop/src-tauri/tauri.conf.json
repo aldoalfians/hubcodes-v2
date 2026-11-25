@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "hubcodes",
+  "version": "0.1.40",
+  "identifier": "id.hubstudio.hubcodes",
+  "build": {
+    "beforeDevCommand": "bash scripts/build-cli.sh debug && pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bash scripts/build-cli.sh release && pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "hubcodes",
+        "width": 1200,
+        "height": 780,
+        "center": true,
+        "minWidth": 960,
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "backgroundColor": "#121517"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Canvas for orchestrating AI coding agents on tmux",
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": null
+    },
+    "externalBin": [
+      "binaries/hubcodes"
+    ],
+    "resources": {
+      "../dist/": "web/"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkwNTNDQTk1OUQxQjBCQjgKUldTNEN4dWRsY3BUa0xJRjBmWHlHVE1vOHdPZlQ5aHRGUm5PRUZrSGZENk5ITTJYcXErcGxRS1MK",
+      "endpoints": [
+        "https://github.com/HubStudio-id/hubcodes/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

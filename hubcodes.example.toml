@@ -1,0 +1,243 @@
+# Copy to ./hubcodes.toml (per project) or ~/.config/hubcodes/hubcodes.toml.
+# Every key is optional; built-in providers are claude, codex, opencode, pi,
+# omp, gemini and shell. A [[provider]] with the same name overrides one.
+# The desktop app's Settings dialog writes this file too (comments are not kept).
+
+# Agent-to-agent loops: `hubcodes loop start a b "goal"` or Loop… on a link.
+[loop]
+max_rounds = 20                 # pause and ask after this many messages along a loop
+
+# Other devices (SSH / Tailscale). This device's name as peers see it:
+[sharing]
+name = "mac"
+# [[peer]]
+# name = "mini"                 # address agents as mini/<agent>
+# host = "mac-mini.tailnet.ts.net"   # or "local" for another tmux session on this machine
+# user = "aldo"
+# session = "hubcodes"
+# hubcodes = "hubcodes"         # path on the peer if not on its login PATH
+
+# Token limits (0 = none); usage comes from the agents' own transcripts.
+[budget]
+max_tokens_per_agent = 0
+max_tokens_per_loop = 0
+
+# Alerts: something stuck, or a pull request that needs you. Also posted to a
+# Slack or Discord webhook, or an ntfy topic for your phone (kept in the Keychain).
+# [alerts]
+# idle_minutes = 10
+# webhook = "${keychain:alerts:webhook}"   # e.g. https://ntfy.sh/<topic>
+
+# Skills: link every skill into every coding tool on this device (Claude Code,
+# opencode, pi, omp, Codex, Gemini and ~/.agents/skills). Links, not copies:
+# a git pull of a source reaches every tool.
+# [skills]
+# sync = true
+# sources = ["~/.hub-skills/skills"]
+
+# Phone / teammate page: `hubcodes serve`, bound to this Mac's Tailscale IP.
+[serve]
+bind = "tailscale"              # or "127.0.0.1" / an IP
+port = 7433
+# token = "…"                   # lets clients outside the tailnet in as operators
+# [[share]]
+# user = "budi@hubstudio.id"    # tailnet login, or "*"
+# role = "operator"             # viewer | operator | owner
+
+# Saved prompts: type /name in a composer. Variables: {agent} {role} {model} {cwd} {branch} {changes} {last_diff} {goal} {notes} {date}
+# [[prompt]]
+# name = "review"
+# description = "Review the current changes"
+# text = "Review the changes on {branch}:\n\n{last_diff}"
+
+# Team templates: New agent → Team, or `hubcodes team start <name>`.
+# [[template]]
+# name = "full-stack"
+# agents = [
+#   { name = "lead", provider = "claude", role = "orchestrator" },
+#   { name = "api",  provider = "claude", role = "software engineer", worktree = "agent/api" },
+# ]
+# links = [["lead", "api", "loop"]]
+
+# Triggers (run while the app or `hubcodes watch` is up).
+# [[trigger]]
+# name = "nightly-review"
+# on = "cron 0 9 * * 1-5"       # or "pr owner/repo", "webhook deploy"
+# action = "loop start lead reviewer \"Review every open PR\""
+
+# Team memory: builtin | hindsight | mcp | command. `${VAR}` reads an environment variable.
+[memory]
+provider = "builtin"
+auto_recall_on_start = true
+auto_retain = true
+# [memory.hindsight]
+# url = "https://memories.hubstudio.id"
+# api_key = "${HINDSIGHT_API_KEY}"
+# bank = "hubstudio"
+# [memory.mcp]
+# url = "https://memories.hubstudio.id/mcp/you/"
+# headers = { Authorization = "Bearer ${HINDSIGHT_API_KEY}" }
+# retain_tool = "retain"
+# recall_tool = "recall"
+
+# Knowledge sources, as many as you have: mcp | git | folder | confluence | jira | command.
+# [[kb]]
+# name = "product"
+# kind = "mcp"
+# url = "https://kb.example/mcp/"
+# headers = { Authorization = "Bearer ${KB_TOKEN}" }
+# search_tool = "product_kb_search"
+# get_tool = "product_kb_get"
+# [[kb]]
+# name = "hermina-docs"
+# kind = "git"
+# repo = "git@github.com:hubstudio/hermina-docs.git"
+# [[kb]]
+# name = "wiki"
+# kind = "confluence"
+# url = "https://hubstudio.atlassian.net/wiki"
+# email = "you@hubstudio.id"
+# token = "${ATLASSIAN_TOKEN}"
+
+# Desktop app only.
+[desktop]
+notifications = true            # OS notification when an agent needs you and the window is in the background
+# default_folder = "~/code"     # where a new agent starts when the dialog leaves the folder empty
+roles = ["orchestrator", "frontend", "backend", "reviewer", "tests", "docs", "research"]  # suggestions; any role can be typed
+
+[[provider]]
+name = "claude"
+command = "claude"
+glyph = "✦"
+color = 215
+# waiting_pattern = "(?i)allow|y/n"   # regex on the last line that marks the node "needs you"
+model_flag = "--model {model}"        # appended when an agent is started with a model
+# role_flag = "--append-system-prompt 'You are the {role} of this team.'"  # appended when it has a role
+models = ["opus", "sonnet", "haiku"]  # extra suggestions; built-in providers read their own catalog
+# models_command = "claude models --plain"  # custom providers: a command printing one model id per line
+
+[[provider]]
+name = "codex"
+command = "codex"
+glyph = "◇"
+color = 252
+
+[[provider]]
+name = "opencode"
+command = "opencode"
+glyph = "◈"
+color = 80
+
+[[provider]]
+name = "pi"
+command = "pi"
+glyph = "π"
+color = 176
+
+[[provider]]
+name = "omp"
+command = "omp"
+glyph = "◆"
+color = 114
+
+# Agents created on first launch of `hubcodes` in this directory.
+[[workspace.agents]]
+name = "planner"
+provider = "claude"
+role = "lead"
+
+[[workspace.agents]]
+name = "builder"
+provider = "codex"
+cwd = "."
+
+[[workspace.agents]]
+name = "reviewer"
+provider = "opencode"
+role = "review"
+
+# from → to
+workspace.edges = [
+  ["planner", "builder"],
+  ["builder", "reviewer"],
+  ["reviewer", "planner"],
+]
+
+
+# ---------------------------------------------------------------- auto-approve policy
+# [policy]
+# mode = "auto"                         # off | auto
+# allow = ["git status*", "git diff*", "cargo test*", "pnpm test", "ls*", "cat *", "rg *"]
+# deny = ["rm -rf *", "git push --force*", "git reset --hard*", "sudo *", "* | sh"]
+# allow_tools = ["Read", "Glob", "Grep", "WebFetch"]
+# deny_paths = ["~/.ssh/*", "*.env", "*.env.*"]
+
+# ---------------------------------------------------------------- playbooks
+# [[playbook]]
+# name = "feature"
+# description = "Plan, build with tests, review, merge"
+# [[playbook.step]]
+# name = "plan"
+# role = "orchestrator"
+# prompt = "Write a plan for: {goal}. Put it in the shared notes, then run the task done command."
+# gate = "human"
+# [[playbook.step]]
+# name = "build"
+# role = "software engineer"
+# prompt = "Implement the plan for: {goal}."
+# gate = "test"
+# retries = 2
+# [[playbook.step]]
+# name = "review"
+# role = "reviewer"
+# prompt = "Review what {prev_agent} built for: {goal}; approve the task or send changes back."
+# gate = "review"
+# [[playbook.step]]
+# name = "merge"
+# action = "merge {prev_agent}"
+
+# ---------------------------------------------------------------- accounts
+# Connected once in Settings → Accounts; trackers and knowledge sources copy
+# the site, email and token reference from here. A token pasted in Settings
+# is stored in the macOS Keychain and the file only says where:
+# ${keychain:NAME}. From a terminal: `hubcodes secret set NAME` (value on stdin).
+# [[connection]]
+# name = "hubstudio"
+# kind = "atlassian"                    # atlassian | plane | github
+# url = "https://hubstudio.atlassian.net"
+# email = "me@hubstudio.id"
+# token = "${keychain:connection:hubstudio}"
+
+# ---------------------------------------------------------------- issue trackers
+# [[tracker]]
+# name = "jira"
+# kind = "jira"                         # jira | plane | github | github-review | github-feedback | command | mcp
+# url = "https://hubstudio.atlassian.net"
+# email = "${JIRA_EMAIL}"
+# token = "${keychain:connection:hubstudio}"   # or ${JIRA_TOKEN} from the environment
+# query = "project = PE AND status = \"Selected for Development\" AND assignee = currentUser() ORDER BY priority"
+# instruction = "/jira-task {key}"      # {key} {title} {url} {description}
+# role = "software engineer"
+# on_start = "In Development"
+# on_done = "In Review"
+# comment_on_done = true
+# limit = 2
+# poll_minutes = 2
+#
+# [[tracker]]                           # pull requests that ask you for a review
+# name = "reviews"
+# kind = "github-review"
+# repo = ""                             # every repository; or "owner/repo", or "owner/*"
+# role = "reviewer"                     # one review per idle reviewer agent; the rest queue
+# limit = 10
+# comment_on_done = false               # the agent posts its own review
+# rereview = true                       # the author pushed after our review: look at what changed
+#
+# [[tracker]]                           # comments on your own pull requests: fix, push, answer, repeat
+# name = "feedback"
+# kind = "github-feedback"
+# role = "pr-fixer"                     # one round per pull request at a time
+# since = "2026-11-21"                  # ignore older feedback
+# ignore = "some-auto-reviewer"         # logins whose comments never start a round; "checks" / "conflicts" turn off failed-check and merge-conflict rounds
+# limit = 10
+# comment_on_done = false               # the agent answers each thread itself

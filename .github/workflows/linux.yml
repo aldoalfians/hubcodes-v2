@@ -1,0 +1,130 @@
+# Linux builds for a release. The macOS build is made and published from a
+# Mac (desktop/scripts/release-github.sh); when that release is published,
+# this adds the Linux AppImage, .deb and CLI to it and the linux entries to
+# latest.json, so the app updates itself on Linux (and on Windows through WSL).
+#
+# Needs the repository secrets TAURI_SIGNING_PRIVATE_KEY (the contents of
+# ~/.tauri/hubcodes.key), plus TAURI_SIGNING_PRIVATE_KEY_PASSWORD only when
+# the key has a password. Run by hand for an existing tag from the Actions tab.
+name: linux
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build, e.g. v0.1.30
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-${{ github.event.release.tag_name || inputs.tag }}
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+            deb: amd64
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+            deb: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev file
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+
+      - name: Build
+        working-directory: desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm tauri build --bundles appimage,deb
+
+      - name: Collect
+        id: collect
+        run: |
+          set -euo pipefail
+          v="${TAG#v}"
+          b=target/release/bundle
+          mkdir -p out
+          cp "$b"/appimage/*.AppImage "out/hubcodes_${v}_${{ matrix.arch }}.AppImage"
+          cp "$b"/appimage/*.AppImage.sig "out/hubcodes_${v}_${{ matrix.arch }}.AppImage.sig"
+          cp "$b"/deb/*.deb "out/hubcodes_${v}_${{ matrix.deb }}.deb"
+          tar -czf "out/hubcodes-cli-linux-${{ matrix.arch }}.tar.gz" -C target/release hubcodes
+          ls -l out
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber out/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.arch }}
+          path: out/*.AppImage.sig
+
+  feed:
+    needs: build
+    if: always() && contains(needs.build.result, 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: sigs
+      - name: Add linux to latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p latest.json -O latest.json --clobber || echo '{}' > latest.json
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > release.json
+          python3 - <<'PY'
+          import glob, json, os, re
+          tag = os.environ["TAG"]; repo = os.environ["GITHUB_REPOSITORY"]
+          feed = json.load(open("latest.json")) or {}
+          rel = json.load(open("release.json"))
+          feed.setdefault("version", tag.lstrip("v"))
+          feed.setdefault("notes", rel.get("body") or f"hubcodes {tag}")
+          feed.setdefault("pub_date", rel.get("published_at"))
+          feed.setdefault("platforms", {})
+          ids = {a["name"]: a["id"] for a in rel["assets"]}
+          for sig in glob.glob("sigs/*/*.AppImage.sig"):
+              name = os.path.basename(sig)[: -len(".sig")]
+              arch = re.search(r"_(x86_64|aarch64)\.AppImage$", name).group(1)
+              feed["platforms"][f"linux-{arch}"] = {
+                  "signature": open(sig).read().strip(),
+                  "url": f"https://api.github.com/repos/{repo}/releases/assets/{ids[name]}",
+              }
+          json.dump(feed, open("latest.json", "w"), indent=2)
+          print(json.dumps(feed, indent=2)[:2000])
+          PY
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber latest.json

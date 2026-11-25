@@ -1,0 +1,360 @@
+{
+  "path": "~/.config/hubcodes/hubcodes.toml",
+  "exists": false,
+  "providers": [
+    {
+      "name": "claude",
+      "command": "claude",
+      "glyph": "\u2726",
+      "color": 215,
+      "waitingPattern": null,
+      "modelFlag": "--model {model}",
+      "roleFlag": "--agents '{\"{slug}\":{\"description\":\"hubcodes role\",\"prompt\":\"You are the {slug} agent of team hubcodes.\"}}' --agent {slug} --append-system-prompt 'You are the {role} of a team of coding agents on hubcodes. Other agents message you as [from name]; answer them with: hubcodes send <name> \"text\". Team tools: hubcodes task add/done, hubcodes note show/add (shared notes), hubcodes memory recall/retain (team memory), hubcodes kb search/get (knowledge base).{extra}'",
+      "models": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": "-c",
+      "hookKind": "claude",
+      "builtin": true,
+      "installed": true
+    },
+    {
+      "name": "codex",
+      "command": "codex",
+      "glyph": "\u25c7",
+      "color": 252,
+      "waitingPattern": null,
+      "modelFlag": "--model {model}",
+      "roleFlag": "-c 'developer_instructions={toml}'",
+      "models": [
+        "gpt-5-codex",
+        "gpt-5"
+      ],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": "resume --last",
+      "hookKind": "codex",
+      "builtin": true,
+      "installed": true
+    },
+    {
+      "name": "opencode",
+      "command": "opencode",
+      "glyph": "\u25c8",
+      "color": 80,
+      "waitingPattern": null,
+      "modelFlag": "--model {model}",
+      "roleFlag": "--agent {agent}",
+      "models": [],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": "-c",
+      "hookKind": "opencode",
+      "builtin": true,
+      "installed": true
+    },
+    {
+      "name": "pi",
+      "command": "pi",
+      "glyph": "\u03c0",
+      "color": 176,
+      "waitingPattern": null,
+      "modelFlag": "--model {model}",
+      "roleFlag": "--append-system-prompt 'You are the {role} of a team of coding agents on hubcodes. Other agents message you as [from name]; answer them with: hubcodes send <name> \"text\". Team tools: hubcodes task add/done, hubcodes note show/add (shared notes), hubcodes memory recall/retain (team memory), hubcodes kb search/get (knowledge base).{extra}'",
+      "models": [],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": null,
+      "hookKind": "pi",
+      "builtin": true,
+      "installed": true
+    },
+    {
+      "name": "omp",
+      "command": "omp",
+      "glyph": "\u25c6",
+      "color": 114,
+      "waitingPattern": null,
+      "modelFlag": "--model={model}",
+      "roleFlag": "--append-system-prompt='You are the {role} of a team of coding agents on hubcodes. Other agents message you as [from name]; answer them with: hubcodes send <name> \"text\". Team tools: hubcodes task add/done, hubcodes note show/add (shared notes), hubcodes memory recall/retain (team memory), hubcodes kb search/get (knowledge base).{extra}'",
+      "models": [],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": null,
+      "hookKind": "omp",
+      "builtin": true,
+      "installed": true
+    },
+    {
+      "name": "gemini",
+      "command": "gemini",
+      "glyph": "\u2727",
+      "color": 75,
+      "waitingPattern": null,
+      "modelFlag": "--model {model}",
+      "roleFlag": null,
+      "models": [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash"
+      ],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": null,
+      "hookKind": "gemini",
+      "builtin": true,
+      "installed": false
+    },
+    {
+      "name": "shell",
+      "command": "$SHELL",
+      "glyph": "$",
+      "color": 245,
+      "waitingPattern": null,
+      "modelFlag": null,
+      "roleFlag": null,
+      "models": [],
+      "modelsCommand": null,
+      "approveKeys": [],
+      "denyKeys": [],
+      "resumeFlag": null,
+      "hookKind": null,
+      "builtin": true,
+      "installed": true
+    }
+  ],
+  "notifications": true,
+  "defaultFolder": null,
+  "roles": [
+    "orchestrator",
+    "software engineer",
+    "reviewer",
+    "tests",
+    "docs",
+    "research"
+  ],
+  "maxRounds": 20,
+  "selfName": "studio",
+  "peers": [
+    {
+      "name": "mini",
+      "host": "mac-mini",
+      "session": "hubcodes"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "review",
+      "text": "Review this"
+    },
+    {
+      "name": "test",
+      "text": "Run the test suite in {cwd}. If anything fails, fix it, rerun, and report what changed. Branch: {branch}.",
+      "description": "Run the tests and fix failures"
+    },
+    {
+      "name": "handoff",
+      "text": "Write a handoff for the next agent: what you changed on {branch}, what is left, and the exact commands to verify. Keep it under 20 lines. Changes so far: {changes}.",
+      "description": "Summarise for the next agent"
+    },
+    {
+      "name": "status",
+      "text": "In one paragraph: what you are doing, what is blocked, what you need from a human.",
+      "description": "One-paragraph status"
+    },
+    {
+      "name": "plan",
+      "text": "Before writing code, list the steps you will take and the files you will touch in {cwd}. Then wait for a go.",
+      "description": "Plan before coding"
+    }
+  ],
+  "templates": [
+    {
+      "name": "duo",
+      "agents": [
+        {
+          "name": "dev",
+          "provider": "claude"
+        }
+      ],
+      "links": []
+    },
+    {
+      "name": "pair",
+      "description": "Builder and reviewer in a loop",
+      "agents": [
+        {
+          "name": "builder",
+          "provider": "claude",
+          "role": "software engineer"
+        },
+        {
+          "name": "reviewer",
+          "provider": "codex",
+          "role": "reviewer"
+        }
+      ],
+      "links": [
+        [
+          "builder",
+          "reviewer",
+          "loop"
+        ]
+      ]
+    },
+    {
+      "name": "full-stack",
+      "description": "Orchestrator, software engineer, reviewer",
+      "agents": [
+        {
+          "name": "lead",
+          "provider": "claude",
+          "role": "orchestrator"
+        },
+        {
+          "name": "dev",
+          "provider": "claude",
+          "role": "software engineer"
+        },
+        {
+          "name": "reviewer",
+          "provider": "codex",
+          "role": "reviewer"
+        }
+      ],
+      "links": [
+        [
+          "lead",
+          "dev"
+        ],
+        [
+          "dev",
+          "reviewer",
+          "loop"
+        ]
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "name": "nightly",
+      "on": "cron 0 2 * * *",
+      "action": "send dev hi",
+      "enabled": true
+    }
+  ],
+  "maxTokensPerAgent": 0,
+  "maxTokensPerLoop": 0,
+  "serve": {
+    "bind": "tailscale",
+    "port": 7433,
+    "token": "${SERVE_TOKEN}",
+    "shares": [
+      {
+        "user": "a@example.invalid",
+        "role": "viewer"
+      }
+    ],
+    "webRoot": ""
+  },
+  "memory": {
+    "provider": "hindsight",
+    "auto_recall_on_start": true,
+    "auto_retain": true,
+    "hindsight": {
+      "url": "https://example.invalid",
+      "api_key": "${HINDSIGHT_API_KEY}",
+      "bank": ""
+    },
+    "mcp": {
+      "retain_tool": "retain",
+      "retain_args": {
+        "content": "{text}"
+      },
+      "recall_tool": "recall",
+      "recall_args": {
+        "query": "{query}"
+      }
+    },
+    "command": {
+      "retain": "",
+      "recall": ""
+    }
+  },
+  "kbs": [
+    {
+      "name": "docs",
+      "kind": "mcp",
+      "url": "https://example.invalid/mcp",
+      "search_tool": "search",
+      "enabled": true
+    }
+  ],
+  "sandbox": {
+    "kind": ""
+  },
+  "alerts": {
+    "idle_minutes": 10,
+    "stale_loop_rounds": 6,
+    "repeated_error_polls": 3
+  },
+  "board": {
+    "columns": [
+      {
+        "id": "todo",
+        "label": "To do"
+      },
+      {
+        "id": "doing",
+        "label": "Doing"
+      },
+      {
+        "id": "review",
+        "label": "Review"
+      },
+      {
+        "id": "done",
+        "label": "Done"
+      }
+    ]
+  },
+  "policy": {
+    "mode": "auto",
+    "allow": [],
+    "deny": [],
+    "allowTools": [
+      "Read"
+    ],
+    "denyPaths": []
+  },
+  "playbooks": [
+    {
+      "name": "feature",
+      "step": [
+        {
+          "name": "build",
+          "retries": 0
+        }
+      ]
+    }
+  ],
+  "trackers": [
+    {
+      "name": "jira",
+      "kind": "jira",
+      "comment_on_done": true,
+      "limit": 2,
+      "poll_minutes": 2,
+      "enabled": true
+    }
+  ]
+}

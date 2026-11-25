@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>hubcodes</title>
+<style>
+  :root { --bg:#121517; --surface:#181c20; --surface-2:#1f2429; --line:#2a3137; --text:#e8e4dc; --muted:#8a918d; --signal:#f2b33d; --working:#6ccb8a; --error:#f06a5e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font: 15px/1.45 -apple-system, "IBM Plex Sans", system-ui, sans-serif; padding: 0 0 env(safe-area-inset-bottom); }
+  header { position: sticky; top:0; background:var(--surface); border-bottom:1px solid var(--line); padding: 12px 16px; display:flex; gap:12px; align-items:baseline; }
+  header b { font-weight:600; } header .muted { color:var(--muted); font-size:13px; }
+  main { padding: 12px 16px 40px; max-width: 720px; margin: 0 auto; }
+  h2 { font-size:13px; font-weight:600; color:var(--muted); margin: 18px 0 8px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding: 10px 12px; margin-bottom: 10px; }
+  .card.waiting { border-color: var(--signal); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .name { font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; font-weight:600; }
+  .st { font-size:12px; } .st.working { color:var(--working); } .st.waiting { color:var(--signal); } .st.idle, .st.offline { color:var(--muted); }
+  .role { font-size:12px; border:1px solid var(--line); border-radius:999px; padding:1px 8px; color:var(--text); }
+  .detail { font-family: ui-monospace, Menlo, monospace; font-size:12px; color:var(--muted); margin-top:6px; white-space:pre-wrap; word-break:break-word; }
+  pre.preview { font: 11px/1.35 ui-monospace, Menlo, monospace; color:var(--muted); background:var(--bg); border-radius:6px; padding:8px; margin:8px 0 0; max-height: 140px; overflow:auto; }
+  .actions { display:flex; gap:6px; margin-top:8px; }
+  button { font: inherit; border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:6px; padding:8px 12px; }
+  button.primary { background:var(--signal); color:#1a1407; border-color: var(--signal); font-weight:500; }
+  button.danger { color: var(--error); }
+  form.send { display:flex; gap:6px; margin-top:8px; }
+  input, textarea { font: inherit; background:var(--surface-2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px 10px; flex:1; min-width:0; }
+  .msg { padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; } .msg .who { font-family: ui-monospace, Menlo, monospace; color:var(--muted); font-size:12px; }
+  .toast { position: fixed; left:50%; bottom: 18px; transform: translateX(-50%); background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:8px 14px; display:none; }
+  .viewer .op { display:none; }
+</style>
+</head>
+<body>
+<header><b>hubcodes</b><select id="session" class="muted" title="Session" aria-label="Session"></select><span class="muted" id="me" style="margin-left:auto"></span></header>
+<main>
+  <h2 id="needs-h">Needs you</h2><div id="needs"></div>
+  <div id="prs-wrap" style="display:none"><h2>Pull requests</h2><div id="prs"></div></div>
+  <h2>Agents</h2><div id="agents"></div>
+  <h2>Notes</h2><div class="card"><pre class="preview" id="notes" style="max-height:220px"></pre><form class="send op" id="note-form"><input id="note" placeholder="Add a note everyone sees"><button class="primary">Add</button></form></div>
+  <h2>Activity</h2><div id="log"></div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const token = params.get("token");
+let session = params.get("session") || "";
+// Every call carries the token and the chosen session.
+const qs = () => { const p = new URLSearchParams(); if (token) p.set("token", token); if (session) p.set("session", session); const s = p.toString(); return s ? `?${s}` : ""; };
+async function loadSessions() {
+  try {
+    const r = await fetch("/api/sessions" + qs());
+    if (!r.ok) return;
+    const v = await r.json();
+    const sel = $("#session");
+    const names = Array.from(new Set([v.current, ...(v.sessions || [])]));
+    sel.innerHTML = names.map((n) => `<option value="${esc(n)}"${n === v.current ? " selected" : ""}>${esc(n)}</option>`).join("");
+    sel.style.display = names.length > 1 ? "" : "none";
+    if (names.length === 1) { const span = document.createElement("span"); span.className = "muted"; span.textContent = " " + v.current; sel.after(span); }
+  } catch {}
+}
+$("#session").addEventListener("change", (e) => { session = e.target.value; const u = new URL(location.href); u.searchParams.set("session", session); history.replaceState(null, "", u); refresh(); });
+let role = "viewer";
+function toast(t) { const el = $("#toast"); el.textContent = t; el.style.display = "block"; setTimeout(() => el.style.display = "none", 2500); }
+async function post(path, body) {
+  const r = await fetch(path + qs(), { method: "POST", headers: { "Content-Type": "application/json" }, body: typeof body === "string" ? body : JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function agentCard(a, withPreview) {
+  const canOp = role === "operator" || role === "owner";
+  return `<div class="card ${a.status}">
+    <div class="row"><span class="name">${esc(a.name)}</span>${a.role ? `<span class="role">${esc(a.role)}</span>` : ""}<span class="muted">${esc(a.provider)}${a.model ? " · " + esc(a.model) : ""}</span>${a.test ? `<span class="muted" title="${esc(a.test)}">${a.test.startsWith("pass") ? "✓ tests" : "✗ tests"}</span>` : ""}${a.holder ? `<span class="muted">⌨ ${esc(a.holder)}</span>` : ""}<span class="st ${a.status}" style="margin-left:auto">${a.status === "waiting" ? "needs you" : a.status}</span></div>
+    ${a.detail ? `<div class="detail">${esc(a.detail)}</div>` : ""}
+    ${withPreview && a.preview.length ? `<pre class="preview">${esc(a.preview.join("\n"))}</pre>` : ""}
+    ${a.status === "waiting" && canOp ? `<div class="actions"><button class="primary" data-answer="${esc(a.name)}" data-ok="1">Approve</button><button class="danger" data-answer="${esc(a.name)}" data-ok="0">Deny</button></div>` : ""}
+    ${canOp ? `<form class="send" data-to="${esc(a.name)}"><input placeholder="Tell ${esc(a.name)} something" autocomplete="off"><button>Send</button></form>` : ""}
+  </div>`;
+}
+async function refresh() {
+  try {
+    const r = await fetch("/api/view" + qs());
+    if (!r.ok) { $("#agents").innerHTML = `<div class="card">${esc(await r.text())}</div>`; return; }
+    const v = await r.json();
+    role = v.role;
+    document.body.classList.toggle("viewer", role === "viewer");
+    $("#me").textContent = `${v.me} · ${v.role}`;
+    const waiting = v.agents.filter((a) => a.status === "waiting");
+    $("#needs-h").textContent = waiting.length ? `${waiting.length} need${waiting.length === 1 ? "s" : ""} you` : "Nobody needs you";
+    $("#needs").innerHTML = waiting.map((a) => agentCard(a, false)).join("");
+    $("#agents").innerHTML = v.agents.map((a) => agentCard(a, true)).join("") || `<div class="card muted">No agents in this session.</div>`;
+    $("#notes").textContent = v.notes || "(empty)";
+    $("#log").innerHTML = v.messages.map((m) => `<div class="msg"><div class="who">${esc(m.from.replace(/^human:/, ""))} → ${esc(m.to)} · ${new Date(m.at * 1000).toLocaleTimeString()}</div>${esc(m.text)}</div>`).join("");
+  } catch (e) { toast(String(e)); }
+}
+// Review and feedback tasks from GitHub: the newest task per pull request.
+const PR_KEY = /^[^:]+:[\w.-]+\/[\w.-]+#\d+$/;
+function verdictApprove(r) { const l = (r || "").split("\n").map((x) => x.trim()).filter(Boolean).pop() || ""; return /^verdict:\s*approve$/i.test(l.replace(/[*`]/g, "")); }
+async function refreshPrs() {
+  try {
+    const r = await fetch("/api/tasks" + qs());
+    if (!r.ok) return;
+    const newest = new Map();
+    for (const t of await r.json()) if (PR_KEY.test(t.external) && (!newest.has(t.external) || newest.get(t.external).at <= t.at)) newest.set(t.external, t);
+    const rows = [...newest.values()].filter((t) => t.status === "done" && (t.synced === "asked" || t.synced === "stalled" || (/^(Re-)?[Rr]eview /.test(t.title) && ["", "started", "done"].includes(t.synced) && verdictApprove(t.result))));
+    $("#prs-wrap").style.display = rows.length ? "" : "none";
+    $("#prs").innerHTML = rows.map((t) => {
+      const key = t.external.slice(t.external.indexOf(":") + 1);
+      const ready = t.synced !== "asked" && t.synced !== "stalled";
+      const what = ready ? "Ready to approve" : t.synced === "stalled" ? "Paused: rounds without a commit" : "Needs you";
+      return `<div class="card"><div class="row"><span class="name">${esc(key)}</span><span class="st waiting" style="margin-left:auto">${what}</span></div>
+        <div class="detail">${esc((t.result || "").replace(/^\s*NEEDS HUMAN:?\s*/i, "").split("\n").filter((l) => !/^\W*verdict:/i.test(l)).join("\n").slice(0, 600))}</div>
+        <div class="actions">${t.externalUrl ? `<a href="${esc(t.externalUrl)}" target="_blank" rel="noopener">Open on GitHub</a>` : ""}
+        ${ready && role === "owner" ? `<button class="primary" data-pr="${t.id}" data-act="approve">Approve on GitHub</button>` : ""}
+        ${role === "operator" || role === "owner" ? `<button data-pr="${t.id}" data-act="ignore">Ignore PR</button>` : ""}</div></div>`;
+    }).join("");
+  } catch {}
+}
+document.addEventListener("click", async (e) => {
+  const p = e.target.closest("[data-pr]");
+  if (p) {
+    try { const j = await post("/api/pr", { id: Number(p.dataset.pr), action: p.dataset.act }); toast(j.result); refreshPrs(); } catch (err) { toast(String(err)); }
+    return;
+  }
+  const b = e.target.closest("[data-answer]");
+  if (!b) return;
+  try { await post("/api/answer", { agent: b.dataset.answer, approve: b.dataset.ok === "1" }); toast((b.dataset.ok === "1" ? "Approved " : "Denied ") + b.dataset.answer); refresh(); } catch (err) { toast(String(err)); }
+});
+document.addEventListener("submit", async (e) => {
+  const f = e.target;
+  e.preventDefault();
+  try {
+    if (f.id === "note-form") { const t = $("#note").value.trim(); if (!t) return; await post("/api/note", t); $("#note").value = ""; }
+    else if (f.dataset.to) { const i = f.querySelector("input"); const t = i.value.trim(); if (!t) return; await post("/api/send", { to: f.dataset.to, text: t }); i.value = ""; toast("Sent to " + f.dataset.to); }
+    refresh();
+  } catch (err) { toast(String(err)); }
+});
+loadSessions();
+refresh();
+refreshPrs();
+setInterval(refresh, 4000);
+setInterval(refreshPrs, 15000);
+</script>
+</body>
+</html>

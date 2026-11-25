@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- hubcodes: a terminal prompt whose three corners are agents, linked,
+       and the cursor that waits for the next instruction. Drawn on the
+       macOS icon grid (824 px tile, 100 px margin) so it sits right in the
+       Dock; the same art serves Windows and Linux. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F242B"/>
+      <stop offset="1" stop-color="#0E1114"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7CF0CF"/>
+      <stop offset="1" stop-color="#2FBF9B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.42" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#3FD6B0" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#3FD6B0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glow)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="3"/>
+  <!-- the prompt: two links between three agents -->
+  <path d="M318 338 L566 512 L318 686" fill="none" stroke="url(#edge)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#0E1114" stroke="url(#edge)" stroke-width="22">
+    <circle cx="318" cy="338" r="52"/>
+    <circle cx="566" cy="512" r="58"/>
+    <circle cx="318" cy="686" r="52"/>
+  </g>
+  <g fill="#7CF0CF">
+    <circle cx="318" cy="338" r="18"/>
+    <circle cx="566" cy="512" r="22"/>
+    <circle cx="318" cy="686" r="18"/>
+  </g>
+  <!-- the cursor -->
+  <rect x="616" y="652" width="168" height="48" rx="24" fill="#F5B13D"/>
+</svg>
