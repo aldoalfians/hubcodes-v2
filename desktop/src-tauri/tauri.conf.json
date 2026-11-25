@@ -56,7 +56,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkwNTNDQTk1OUQxQjBCQjgKUldTNEN4dWRsY3BUa0xJRjBmWHlHVE1vOHdPZlQ5aHRGUm5PRUZrSGZENk5ITTJYcXErcGxRS1MK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJEODE2QkQzMDRDRkI4NjkKUldScHVNOEUwMnVCdmVxblZSc0NBQkhuMklFTjM3VjVDL0pYSjlzMTJ5U1dNMlZ5OS85WGpxQXcK",
       "endpoints": [
         "https://github.com/HubStudio-id/hubcodes/releases/latest/download/latest.json"
       ]
